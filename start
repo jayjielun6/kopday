@@ -1,0 +1,173 @@
+dispatch(e) {
+                this.state = (t=>{
+                    switch (e.type) {
+                    case "failed":
+                        return {
+                            ...t,
+                            failureCount: e.failureCount,
+                            failureReason: e.error
+                        };
+                    case "pause":
+                        return {
+                            ...t,
+                            isPaused: !0
+                        };
+                    case "continue":
+                        return {
+                            ...t,
+                            isPaused: !1
+                        };
+                    case "loading":
+                        return {
+                            ...t,
+                            context: e.context,
+                            data: void 0,
+                            failureCount: 0,
+                            failureReason: null,
+                            error: null,
+                            isPaused: !c.canFetch(this.options.networkMode),
+                            status: "loading",
+                            variables: e.variables
+                        };
+                    case "success":
+                        return {
+                            ...t,
+                            data: e.data,
+                            failureCount: 0,
+                            failureReason: null,
+                            error: null,
+                            status: "success",
+                            isPaused: !1
+                        };
+                    case "error":
+                        return {
+                            ...t,
+                            data: void 0,
+                            error: e.error,
+                            failureCount: t.failureCount + 1,
+                            failureReason: e.error,
+                            isPaused: !1,
+                            status: "error"
+                        };
+                    case "setState":
+                        return {
+                            ...t,
+                            ...e.state
+                        }
+                    }
+                }
+                )(this.state),
+                n.notifyManager.batch(()=>{
+                    this.observers.forEach(t=>{
+                        t.onMutationUpdate(e)
+                    }
+                    ),
+                    this.mutationCache.notify({
+                        mutation: this,
+                        type: "updated",
+                        action: e
+                    })
+                }
+                )
+            }
+        }
+        function d() {
+            return {
+                context: void 0,
+                data: void 0,
+                error: null,
+                failureCount: 0,
+                failureReason: null,
+                isPaused: !1,
+                status: "idle",
+                variables: void 0
+            }
+        }
+        t.Mutation = f,
+        t.getDefaultState = d
+    },
+    1348: function(e, t, a) {
+        "use strict";
+        Object.defineProperty(t, "__esModule", {
+            value: !0
+        });
+        var r = a(305)
+          , n = a(637)
+          , i = a(9095)
+          , c = a(8902);
+        class f extends c.Subscribable {
+            constructor(e) {
+                super(),
+                this.config = e || {},
+                this.mutations = [],
+                this.mutationId = 0
+            }
+            build(e, t, a) {
+                let r = new n.Mutation({
+                    mutationCache: this,
+                    logger: e.getLogger(),
+                    mutationId: ++this.mutationId,
+                    options: e.defaultMutationOptions(t),
+                    state: a,
+                    defaultOptions: t.mutationKey ? e.getMutationDefaults(t.mutationKey) : void 0
+                });
+                return this.add(r),
+                r
+            }
+            add(e) {
+                this.mutations.push(e),
+                this.notify({
+                    type: "added",
+                    mutation: e
+                })
+            }
+            remove(e) {
+                this.mutations = this.mutations.filter(t=>t !== e),
+                this.notify({
+                    type: "removed",
+                    mutation: e
+                })
+            }
+            clear() {
+                r.notifyManager.batch(()=>{
+                    this.mutations.forEach(e=>{
+                        this.remove(e)
+                    }
+                    )
+                }
+                )
+            }
+            getAll() {
+                return this.mutations
+            }
+            find(e) {
+                return void 0 === e.exact && (e.exact = !0),
+                this.mutations.find(t=>i.matchMutation(e, t))
+            }
+            findAll(e) {
+                return this.mutations.filter(t=>i.matchMutation(e, t))
+            }
+            notify(e) {
+                r.notifyManager.batch(()=>{
+                    this.listeners.forEach(t=>{
+                        t(e)
+                    }
+                    )
+                }
+                )
+            }
+            resumePausedMutations() {
+                var e;
+                return this.resuming = (null != (e = this.resuming) ? e : Promise.resolve()).then(()=>{
+                    let e = this.mutations.filter(e=>e.state.isPaused);
+                    return r.notifyManager.batch(()=>e.reduce((e,t)=>e.then(()=>t.continue().catch(i.noop)), Promise.resolve()))
+                }
+                ).then(()=>{
+                    this.resuming = void 0
+                }
+                ),
+                this.resuming
+            }
+        }
+        t.MutationCache = f
+    },
